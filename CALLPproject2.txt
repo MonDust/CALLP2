@@ -1,0 +1,217 @@
+BMP files
+
+    BMP file format is a common way to store images
+    There are several versions of BMP headers, but we will focus on the most common ones
+    Each BMP file contains:
+        a 14-bytes long file header:
+            2-byte type (must be equal to BM encoded in ASCII)
+            4-byte file size
+            2x 2-byte reserved fields (not used)
+            4-byte offset to the main data (pixel values)
+        a variable size (but with modern system, at least 40-bytes long) info header:
+            4-byte real size of the header
+            4-byte width
+            4-byte height
+            2-byte number of planes (not used)
+            2-byte number of bits used to store pixels
+            4-byte compression type
+            4-byte image size
+            4-byte horizontal DPI
+            4-byte vertical DPI
+            4-byte number of colors in the palette
+            4-byte number of important colors (not used)
+        an array of pixel data
+
+Project
+
+    Write a C program to parse BMP files
+
+    You can use the following definitions as a starting point:
+
+    #include <stdint.h>
+
+    typedef uint16_t WORD;
+    typedef uint32_t DWORD;
+    typedef int32_t LONG;
+
+    // https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapfileheader
+    typedef struct tagBITMAPFILEHEADER {
+      WORD  bfType;
+      DWORD bfSize;
+      WORD  bfReserved1;
+      WORD  bfReserved2;
+      DWORD bfOffBits;
+    } BITMAPFILEHEADER, *LPBITMAPFILEHEADER, *PBITMAPFILEHEADER;
+
+    // https://docs.microsoft.com/pl-pl/previous-versions/dd183376(v=vs.85)
+    typedef struct tagBITMAPINFOHEADER {
+      DWORD biSize;
+      LONG  biWidth;
+      LONG  biHeight;
+      WORD  biPlanes;
+      WORD  biBitCount;
+      DWORD biCompression;
+      DWORD biSizeImage;
+      LONG  biXPelsPerMeter;
+      LONG  biYPelsPerMeter;
+      DWORD biClrUsed;
+      DWORD biClrImportant;
+    } BITMAPINFOHEADER, *LPBITMAPINFOHEADER, *PBITMAPINFOHEADER;
+
+Requirements for 3.0
+
+    The program should accept one command line parameter in the format:
+
+    $ ./program PATH-TO-BMP-FILE
+
+    For example:
+
+    $ ./program test.bmp
+
+    Program must print out the parsed values from BITMAPFILEHEADER e.g.:
+
+    BITMAPFILEHEADER:
+      bfType:          0x4D42 (BM)
+      bfSize:          369738
+      bfReserved1:     0x0
+      bfReserved2:     0x0
+      bfOffBits:       138
+
+Requirements for 3.5
+
+    Additionally, program must print out parsed values from BITMAPINFOHEADER e.g.:
+
+    BITMAPINFOHEADER:
+      biSize:          124
+      biWidth:         280
+      biHeight:        330
+      biPlanes:        1
+      biBitCount:      32
+      biCompression:   3
+      biSizeImage:     369600
+      biXPelsPerMeter: 3779
+      biYPelsPerMeter: 3779
+      biClrUsed:       0
+      biClrImportant:  0
+
+Requirements for 4.0
+
+    Additionally, program must print out a histogram of RGB colors. For this part, focus only on uncompressed bitmaps with 24-bits (1-byte per red, green and blue channels). For bitmaps with biCompression ≠0\neq 0​=0 or biBitCount ≠24\neq 24​=24, you can just emit a message that histogram calculation is unsupported (but parsing of headers is still required).
+
+    Pixel array is stored as a sequence of rows. Each row has length equal to: ⌊bitCount⋅width+3132⌋⋅4\lfloor \frac{bitCount \cdot width + 31}{32} \rfloor \cdot 4⌊32bitCount⋅width+31​⌋⋅4, which ensures that the number of bytes a row has is divisible by 4.
+
+    For example, let’s assume there is a 97 pixel wide, 24-bit bitmap (24-bits = 3 bytes):
+    ⌊24⋅97+3132⌋⋅4=29297⋅3=291\begin{array}{ccc} \left\lfloor \dfrac{24 \cdot 97 + 31}{32} \right\rfloor \cdot 4 & = & 292 \\ 97 \cdot 3 & = & 291 \end{array}⌊3224⋅97+31​⌋⋅497⋅3​==​292291​
+
+    The program should read 292 bytes at a time, but process only 291 bytes our of that (the remaining byte is called a padding).
+
+    The expected outcome for an uncompressed 24-bit BMP file should look like this:
+
+    Red:
+      0-15: 21.80%
+      16-31: 3.02%
+      32-47: 2.24%
+      48-63: 0.46%
+      64-79: 0.40%
+      80-95: 0.26%
+      96-111: 0.21%
+      112-127: 0.17%
+      128-143: 0.22%
+      144-159: 0.18%
+      160-175: 0.21%
+      176-191: 0.50%
+      192-207: 0.50%
+      208-223: 0.57%
+      224-239: 0.84%
+      240-255: 68.42%
+    Green:
+      0-15: 13.21%
+      16-31: 0.54%
+      32-47: 0.43%
+      48-63: 0.51%
+      64-79: 0.52%
+      80-95: 0.60%
+      96-111: 0.76%
+      112-127: 0.84%
+      128-143: 1.13%
+      144-159: 1.38%
+      160-175: 1.42%
+      176-191: 6.27%
+      192-207: 1.92%
+      208-223: 1.12%
+      224-239: 0.76%
+      240-255: 68.59%
+    Blue:
+      0-15: 13.20%
+      16-31: 0.54%
+      32-47: 0.42%
+      48-63: 0.33%
+      64-79: 0.35%
+      80-95: 0.40%
+      96-111: 0.35%
+      112-127: 0.36%
+      128-143: 0.50%
+      144-159: 0.62%
+      160-175: 0.72%
+      176-191: 1.13%
+      192-207: 1.38%
+      208-223: 1.87%
+      224-239: 2.89%
+      240-255: 74.92%
+
+Requirements for 4.5
+
+    Program must also handle case when it is started with two command line parameters:
+
+    $ ./program PATH-TO-INPUT-BMP-FILE PATH-TO-OUTPUT-BMP-FILE
+
+    The output BMP file should have all the headers with exactly the same values as the input BMP, but the pixel array should be modified to make the image grayscale using the simplest formula computed for each pixel: gray=red+green+blue3gray = \frac{red + green + blue}{3}gray=3red+green+blue​. The value graygraygray should be copied to redredred, greengreengreen and blueblueblue fields for the pixel. For example, a pixel has red=100red=100red=100, green=60green=60green=60, blue=200blue=200blue=200, therefore gray=3603=120gray = \frac{360}{3} = 120gray=3360​=120 and you should modify the pixel array to have red=green=blue=120red = green = blue = 120red=green=blue=120. For this task, you can also assume to support only uncompressed 24-bit BMP files and emit a message for others.
+
+Important! The above method to create grayscale image is a good exercise in manipulating binary data and you can easily see if your code performs as expected (either the output BMP is a grayscale image or not). However, the method is bad for several reasons and you should be aware of that as well. First of all, assigning red, green and blue to the same value in each pixel will make it gray, but is a waste of memory space. One should create a palette of 256 possible gray colors and represent each pixel with a single byte instead of three. But even more severe problem lies in the fact, that converting to grayscale should take into account color recognition by human eye, which is not uniform for all color channels. Recommended reading: http://cadik.posvete.cz/color_to_gray_evaluation/
+Requirement for 5.0
+
+    Modify your program to use steganography to hide a text inside BMP pixel array
+
+    For example, use the least significant bit of the first 8 bytes to encode text length (0-255 characters long). Then use the least significant bit of the next bytes to encode bits of the characters. In this method, the image should look exactly the same for an unsuspecting user, but the message will be there hidden in the bits of pixels.
+
+    If the pixel array looked like this:
+
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+          00 00 00 00 00 00 00 00
+
+    Then after encoding Hello! it would change to:
+
+     6  = 00 01 01 00 00 00 00 00
+    'H' = 00 00 00 01 00 00 01 00
+    'e' = 01 00 01 00 00 01 01 00
+    'l' = 00 00 01 01 00 01 01 00
+    'l' = 00 00 01 01 00 01 01 00
+    'o' = 01 01 01 01 00 01 01 00
+    '!' = 01 00 00 00 00 01 00 00
+
+    For this task to be considered, please let your program hide a message in a BMP file, but also let it decode a message and print it out:
+
+    $ ./program PATH-TO-INPUT-BMP PATH-TO-ENCODED-BMP "text to be hidden"
+    $ ./program PATH-TO-ENCODED-BMP
+    BITMAPFILEHEADER
+      ...
+    BITMAPINFOHEADER
+      ...
+
+    Decode steganography? [Y/n]
+
+    text to be hidden
+
+    As previously, you can just support uncompressed 24-bit BMPs
+
+Useful resources
+
+    wxHexEditor and BMP tags file used in the GIF preparation above
+    BITMAPFILEHEADER
+    BITMAPINFOHEADER
+    File input/output, specifically fread(), fwrite() and fseek()
